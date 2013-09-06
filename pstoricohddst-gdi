@@ -1,14 +1,22 @@
 #!/bin/bash
 
+# Username
 user="$2"
-ptitle="$3"
-ddate="`LC_ALL=en_US.UTF-8 date '+%Y/%m/%d %H:%M:%S'`"
-uid="/tmp/pstoricohddst-gdi-`uuidgen`"
 
+# Page title (not used at this time, "Document" instead)
+ptitle="$3"
+
+# Printing date
+ddate="`LC_ALL=en_US.UTF-8 date '+%Y/%m/%d %H:%M:%S'`"
+
+# Temporary directory
+uid="/tmp/pstoricohddst-gdi-`uuidgen`"
 mkdir -p $uid
 
+# Converting from PostScript to PostScript-monochrome, then to PBM image format (per page)
 gs -sDEVICE=psmono -sOutputFile=- -r600 -dQUIET -dBATCH -dNOPAUSE - | gs -sDEVICE=pbmraw -sOutputFile=${uid}/%d-page.pbm -r600 -dQUIET -dBATCH -dNOPAUSE -
 
+# Flushing PJL header
 cat <<EOF
 %-12345X@PJL
 @PJL SET TIMESTAMP=$ddate
@@ -21,10 +29,16 @@ EOF
 
 ls $uid/ | grep 'pbm$' | sort -n | while read page; do
 
+    # Converting page to JBIG format (parameters are very special for this printer!)
     pbmtojbg -p 72 -o 3 -m 0 -q < $uid/$page > $uid/raster.jbig
+
+    # Taking image size
     jsize=`wc -c < $uid/raster.jbig`
+
+    # Taking image dimensions
     read fn ft xs ys garb < <(identify $uid/raster.jbig | tr "x" " ")
 
+    # Flushing page header
     cat <<EOF
 @PJL SET PAGESTATUS=START
 @PJL SET COPIES=1
@@ -37,8 +51,11 @@ ls $uid/ | grep 'pbm$' | sort -n | while read page; do
 @PJL SET IMAGELEN=$jsize
 EOF
 
+    # Flushing image
     cat $uid/raster.jbig
 
+    # Flushing page footer
+    # TODO: pixelcount for toner estimate
     cat <<EOF
 @PJL SET DOTCOUNT=1132782
 @PJL SET PAGESTATUS=END
@@ -46,9 +63,11 @@ EOF
 
 done
 
+# Flushing PJL footer
 cat <<EOF
 @PJL EOJ
 %-12345X
 EOF
 
+# Cleaning up
 rm -rf $uid
