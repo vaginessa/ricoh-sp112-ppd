@@ -1,0 +1,4 @@
+1) Copy pstoricohddst-gdi to cups' filters directory (usually /usr/lib/cups/filter).
+2) Make sure it executable by lp user
+3) Add printer through CUPS' web interface (usually http://localhost:631/), click 'Choose file' for PPD
+4) You got it!
