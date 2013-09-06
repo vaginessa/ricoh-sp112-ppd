@@ -1,0 +1,64 @@
+#!/bin/bash
+
+user="$2"
+ptitle="$3"
+ddate="`LC_ALL=en_US.UTF-8 date '+%Y/%m/%d %H:%M:%S'`"
+uid="/tmp/pstoricohddst-gdi-`uuidgen`"
+
+[ "`whoami`" = "lp" ] || uid=/tmp/aaaaaaaaaaaaaa
+#rm $uid/*
+mkdir -p $uid
+
+#cat > /tmp/raster.ps
+#gs -sDEVICE=psmono -sOutputFile=/tmp/psmono.ps -r600 -dBATCH -dNOPAUSE /tmp/raster.ps
+#gs -sDEVICE=pbmraw -sOutputFile=/tmp/raster.pbm -r600 -dBATCH -dNOPAUSE /tmp/psmono.ps
+#pbmtojbg -p 72 -o 3 -m 0 -q < /tmp/raster.pbm > /tmp/raster.jbig
+
+gs -sDEVICE=psmono -sOutputFile=- -r600 -dQUIET -dBATCH -dNOPAUSE - | gs -sDEVICE=pbmraw -sOutputFile=${uid}/%d-page.pbm -r600 -dQUIET -dBATCH -dNOPAUSE -
+
+cat <<EOF
+%-12345X@PJL
+@PJL SET TIMESTAMP=$ddate
+@PJL SET FILENAME=Document
+@PJL SET COMPRESS=JBIG
+@PJL SET USERNAME=$user
+@PJL SET COVER=OFF
+@PJL SET HOLD=OFF
+EOF
+
+ls $uid/ | grep 'pbm$' | sort -n | while read page; do
+
+    pbmtojbg -p 72 -o 3 -m 0 -q < $uid/$page > $uid/raster.jbig
+    jsize=`wc -c < $uid/raster.jbig`
+    read fn ft xs ys garb < <(identify $uid/raster.jbig | tr "x" " ")
+
+    cat <<EOF
+@PJL SET PAGESTATUS=START
+@PJL SET COPIES=1
+@PJL SET MEDIASOURCE=AUTO
+@PJL SET MEDIATYPE=PLAINRECYCLE
+@PJL SET PAPER=A4
+@PJL SET PAPERWIDTH=$xs
+@PJL SET PAPERLENGTH=$ys
+@PJL SET RESOLUTION=600
+@PJL SET IMAGELEN=$jsize
+EOF
+
+    cat $uid/raster.jbig
+
+    cat <<EOF
+@PJL SET DOTCOUNT=1132782
+@PJL SET PAGESTATUS=END
+EOF
+
+    cp $uid/raster.jbig $uid/$page
+    # next page, if exist
+
+done
+
+cat <<EOF
+@PJL EOJ
+%-12345X
+EOF
+
+rm -r $uid
