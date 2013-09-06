@@ -5,14 +5,7 @@ ptitle="$3"
 ddate="`LC_ALL=en_US.UTF-8 date '+%Y/%m/%d %H:%M:%S'`"
 uid="/tmp/pstoricohddst-gdi-`uuidgen`"
 
-[ "`whoami`" = "lp" ] || uid=/tmp/aaaaaaaaaaaaaa
-#rm $uid/*
 mkdir -p $uid
-
-#cat > /tmp/raster.ps
-#gs -sDEVICE=psmono -sOutputFile=/tmp/psmono.ps -r600 -dBATCH -dNOPAUSE /tmp/raster.ps
-#gs -sDEVICE=pbmraw -sOutputFile=/tmp/raster.pbm -r600 -dBATCH -dNOPAUSE /tmp/psmono.ps
-#pbmtojbg -p 72 -o 3 -m 0 -q < /tmp/raster.pbm > /tmp/raster.jbig
 
 gs -sDEVICE=psmono -sOutputFile=- -r600 -dQUIET -dBATCH -dNOPAUSE - | gs -sDEVICE=pbmraw -sOutputFile=${uid}/%d-page.pbm -r600 -dQUIET -dBATCH -dNOPAUSE -
 
@@ -51,9 +44,6 @@ EOF
 @PJL SET PAGESTATUS=END
 EOF
 
-    cp $uid/raster.jbig $uid/$page
-    # next page, if exist
-
 done
 
 cat <<EOF
@@ -61,4 +51,4 @@ cat <<EOF
 %-12345X
 EOF
 
-rm -r $uid
+rm -rf $uid
