@@ -1,10 +1,26 @@
 #!/bin/bash
 
+function trapINT() {
+    [ "x$trp" = "x" ] && trp="yes" || return
+#    pid=`ps a | grep $uid | grep -v grep | awk ' { print $1 } '`
+#    [ ! "x$pid" = "x" ] && { kill $pid;  sleep 5; }
+    sleep 3
+    rm -rf $uid
+    exit
+}
+
+function stop() {
+    echo "stop" > $uid/999999999-page.pbm
+}
+
+trap "stop; trapINT" SIGINT SIGTERM SIGQUIT
+#trap 'echo No' SIGINT SIGTERM SIGQUIT EXIT; 
 # Username
 user="$2"
 
 # Page title (not used at this time, "Document" instead)
 ptitle="$3"
+my="$0"
 
 # Printing date
 ddate="`LC_ALL=en_US.UTF-8 date '+%Y/%m/%d %H:%M:%S'`"
@@ -13,11 +29,12 @@ ddate="`LC_ALL=en_US.UTF-8 date '+%Y/%m/%d %H:%M:%S'`"
 uid="/tmp/pstoricohddst-gdi-`uuidgen`"
 mkdir -p $uid
 
-# Converting from PostScript to PostScript-monochrome, then to PBM image format (per page)
-gs -sDEVICE=psmono -sOutputFile=- -r600 -dQUIET -dBATCH -dNOPAUSE - | gs -sDEVICE=pbmraw -sOutputFile=${uid}/%d-page.pbm -r600 -dQUIET -dBATCH -dNOPAUSE -
-
-# Flushing PJL header
-cat <<EOF
+(
+stage="empty"
+inotifywait -q -m -r -e close_write --format '%f' $uid | grep --line-buffered 'page.pbm$' | while read page; do
+    [ "$stage" = "empty" ] && {
+	# Flushing PJL header
+	cat <<EOF
 %-12345X@PJL
 @PJL SET TIMESTAMP=$ddate
 @PJL SET FILENAME=Document
@@ -27,19 +44,30 @@ cat <<EOF
 @PJL SET HOLD=OFF
 EOF
 
-ls $uid/ | grep 'pbm$' | sort -n | while read page; do
+	stage="printing"
+    }
+    [ "$page" = "999999999-page.pbm" ] && { 
+	# Flushing PJL footer
+	cat <<EOF
+@PJL EOJ
+%-12345X
+EOF
+	pid=`ps a | grep $uid | grep -v grep | awk ' { print $1 } '`
+	[ ! "x$pid" = "x" ] && kill $pid
+	break
+    }
+    [ "$stage" = "printing" ] && {
+        # Converting page to JBIG format (parameters are very special for this printer!)
+        pbmtojbg -p 72 -o 3 -m 0 -q < $uid/$page > $uid/raster.jbig
 
-    # Converting page to JBIG format (parameters are very special for this printer!)
-    pbmtojbg -p 72 -o 3 -m 0 -q < $uid/$page > $uid/raster.jbig
+        # Taking image size
+        jsize=`wc -c < $uid/raster.jbig`
 
-    # Taking image size
-    jsize=`wc -c < $uid/raster.jbig`
+        # Taking image dimensions
+        read fn ft xs ys garb < <(identify $uid/raster.jbig | tr "x" " ")
 
-    # Taking image dimensions
-    read fn ft xs ys garb < <(identify $uid/raster.jbig | tr "x" " ")
-
-    # Flushing page header
-    cat <<EOF
+        # Flushing page header
+        cat <<EOF
 @PJL SET PAGESTATUS=START
 @PJL SET COPIES=1
 @PJL SET MEDIASOURCE=AUTO
@@ -51,23 +79,32 @@ ls $uid/ | grep 'pbm$' | sort -n | while read page; do
 @PJL SET IMAGELEN=$jsize
 EOF
 
-    # Flushing image
-    cat $uid/raster.jbig
+        # Flushing image
+        cat $uid/raster.jbig
 
-    # Flushing page footer
-    # TODO: pixelcount for toner estimate
-    cat <<EOF
+        # Flushing page footer
+        # TODO: pixelcount for toner estimate
+        cat <<EOF
 @PJL SET DOTCOUNT=1132782
 @PJL SET PAGESTATUS=END
 EOF
+    }
+done
+) &
+
+# Converting from PostScript to PostScript-monochrome, then to PBM image format (per page)
+gs -sDEVICE=psmono -sOutputFile=- -r600 -dQUIET -dBATCH -dNOPAUSE - | gs -sDEVICE=pbmraw -sOutputFile=${uid}/%d-page.pbm -r600 -dQUIET -dBATCH -dNOPAUSE -
+
+
+stop
+wait
+
+trapINT
+
+exit
+
+ls $uid/ | grep 'pbm$' | sort -n | while read page; do
+
 
 done
 
-# Flushing PJL footer
-cat <<EOF
-@PJL EOJ
-%-12345X
-EOF
-
-# Cleaning up
-rm -rf $uid
