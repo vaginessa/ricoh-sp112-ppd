@@ -10,7 +10,7 @@
 *Manufacturer: "Ricoh"
 *ModelName: "Ricoh Aficio SP 100"
 *ShortNickName: "Ricoh Aficio SP 100"
-*NickName: "Ricoh Aficio SP 100, pstoricohddst-gdi 0.3 alpha"
+*NickName: "Ricoh Aficio SP 100, pstoricohddst-gdi 0.4 alpha"
 *PSVersion: "(3010.000) 0"
 *LanguageLevel: "3"
 *ColorDevice: False
@@ -78,8 +78,6 @@
 *OrderDependency: 10 AnySetup *InputSlot
 *DefaultInputSlot: Auto
 *InputSlot Auto/Auto: "<</MediaPosition 0>>setpagedevice"
-*InputSlot Automatic/Automatic Tray: "<</MediaPosition 1>>setpagedevice"
-*InputSlot Manual/Manual Tray: "<</MediaPosition 3>>setpagedevice"
 *CloseUI: *InputSlot
 *OpenUI *Resolution/Resolution: PickOne
 *OrderDependency: 10 AnySetup *Resolution

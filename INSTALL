@@ -1,4 +1,13 @@
-1) Copy pstoricohddst-gdi to cups' filters directory (usually /usr/lib/cups/filter).
-2) Make sure it executable by lp user
-3) Add printer through CUPS' web interface (usually http://localhost:631/), click 'Choose file' for PPD
-4) You got it!
+
+1) Install netpbm, JBIG-KIT tools, inotify-tools
+
+2) Copy pstoricohddst-gdi to cups' filters directory (usually
+   /usr/lib/cups/filter). 
+
+3) Make sure it is executable by lp user and owned by root:root (i.e.
+   chown root:root pstoricohddst-gdi) 
+
+4) Add printer through CUPS' web interface (usually
+   http://localhost:631/), click 'Choose file' and select provided PPD-file
+
+5) Print!
