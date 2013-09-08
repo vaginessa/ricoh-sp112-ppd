@@ -1,9 +1,7 @@
 #!/bin/bash
 
 function trapINT() {
-    [ "x$trp" = "x" ] && trp="yes" || return
-#    pid=`ps a | grep $uid | grep -v grep | awk ' { print $1 } '`
-#    [ ! "x$pid" = "x" ] && { kill $pid;  sleep 5; }
+    [ "x$trp" = "x" ] &&  trp="yes" || return
     sleep 3
     rm -rf $uid
     exit
@@ -11,6 +9,10 @@ function trapINT() {
 
 function stop() {
     echo "stop" > $uid/999999999-page.pbm
+}
+
+function log() {
+    echo $* | logger -t pstoricohddst-gdi
 }
 
 trap "stop; trapINT" SIGINT SIGTERM SIGQUIT
@@ -32,6 +34,7 @@ mkdir -p $uid
 (
 stage="empty"
 inotifywait -q -m -r -e close_write --format '%f' $uid | grep --line-buffered 'page.pbm$' | while read page; do
+    # page submitted
     [ "$stage" = "empty" ] && {
 	# Flushing PJL header
 	cat <<EOF
@@ -52,7 +55,7 @@ EOF
 @PJL EOJ
 %-12345X
 EOF
-	pid=`ps a | grep $uid | grep -v grep | awk ' { print $1 } '`
+	pid=`ps ax | grep $uid | grep -v grep | awk ' { print $1 } '`
 	[ ! "x$pid" = "x" ] && kill $pid
 	break
     }
@@ -95,16 +98,7 @@ done
 # Converting from PostScript to PostScript-monochrome, then to PBM image format (per page)
 gs -sDEVICE=psmono -sOutputFile=- -r600 -dQUIET -dBATCH -dNOPAUSE - | gs -sDEVICE=pbmraw -sOutputFile=${uid}/%d-page.pbm -r600 -dQUIET -dBATCH -dNOPAUSE -
 
-
 stop
 wait
 
 trapINT
-
-exit
-
-ls $uid/ | grep 'pbm$' | sort -n | while read page; do
-
-
-done
-
