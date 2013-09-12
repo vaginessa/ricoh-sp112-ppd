@@ -67,7 +67,7 @@ EOF
         jsize=`wc -c < $uid/raster.jbig`
 
         # Taking image dimensions
-        read fn ft xs ys garb < <(identify $uid/raster.jbig | tr "x" " ")
+        read fn ft xs ys garb < <(identify $uid/$page | tr "x" " ")
 
         # Flushing page header
         cat <<EOF
