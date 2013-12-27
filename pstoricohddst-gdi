@@ -2,8 +2,7 @@
 
 function trapINT() {
     [ "x$trp" = "x" ] &&  trp="yes" || return
-    sleep 3
-    rm -rf $uid
+    sleep 30 && rm -rf $uid &
     exit
 }
 
