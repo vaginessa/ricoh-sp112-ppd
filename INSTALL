@@ -1,4 +1,4 @@
-1) Install netpbm, JBIG-KIT tools, imagemagick, inotify-tools
+1) Install netpbm, JBIG-KIT tools, imagemagick, inotify-tools (optional)
 
 2) Copy pstoricohddst-gdi to cups' filters directory (usually
    /usr/lib/cups/filter). 
