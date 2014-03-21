@@ -30,13 +30,15 @@ ddate="`LC_ALL=en_US.UTF-8 date '+%Y/%m/%d %H:%M:%S'`"
 uid="/tmp/pstoricohddst-gdi-`uuidgen`"
 mkdir -p $uid
 
-(
-stage="empty"
-inotifywait -q -m -r -e close_write --format '%f' $uid | grep --line-buffered 'page.pbm$' | while read page; do
-    # page submitted
-    [ "$stage" = "empty" ] && {
-	# Flushing PJL header
-	cat <<EOF
+[ -x "/usr/bin/inotifywait" ] && {
+
+	(
+	stage="empty"
+	inotifywait -q -m -r -e close_write --format '%f' $uid | grep --line-buffered 'page.pbm$' | while read page; do
+	    # page submitted
+	    [ "$stage" = "empty" ] && {
+		# Flushing PJL header
+		cat <<EOF
 %-12345X@PJL
 @PJL SET TIMESTAMP=$ddate
 @PJL SET FILENAME=Document
@@ -46,30 +48,30 @@ inotifywait -q -m -r -e close_write --format '%f' $uid | grep --line-buffered 'p
 @PJL SET HOLD=OFF
 EOF
 
-	stage="printing"
-    }
-    [ "$page" = "999999999-page.pbm" ] && { 
-	# Flushing PJL footer
-	cat <<EOF
+		stage="printing"
+	    }
+	    [ "$page" = "999999999-page.pbm" ] && { 
+		# Flushing PJL footer
+		cat <<EOF
 @PJL EOJ
 %-12345X
 EOF
-	pid=`ps ax | grep $uid | grep -v grep | awk ' { print $1 } '`
-	[ ! "x$pid" = "x" ] && kill $pid
-	break
-    }
-    [ "$stage" = "printing" ] && {
-        # Converting page to JBIG format (parameters are very special for this printer!)
-        pbmtojbg -p 72 -o 3 -m 0 -q < $uid/$page > $uid/raster.jbig
+		pid=`ps ax | grep $uid | grep -v grep | awk ' { print $1 } '`
+		[ ! "x$pid" = "x" ] && kill $pid
+		break
+	    }
+	    [ "$stage" = "printing" ] && {
+		# Converting page to JBIG format (parameters are very special for this printer!)
+		pbmtojbg -p 72 -o 3 -m 0 -q < $uid/$page > $uid/raster.jbig
 
-        # Taking image size
-        jsize=`wc -c < $uid/raster.jbig`
+		# Taking image size
+		jsize=`wc -c < $uid/raster.jbig`
 
-        # Taking image dimensions
-        read fn ft xs ys garb < <(identify $uid/$page | tr "x" " ")
+		# Taking image dimensions
+		read fn ft xs ys garb < <(identify $uid/$page | tr "x" " ")
 
-        # Flushing page header
-        cat <<EOF
+		# Flushing page header
+		cat <<EOF
 @PJL SET PAGESTATUS=START
 @PJL SET COPIES=1
 @PJL SET MEDIASOURCE=AUTO
@@ -81,23 +83,81 @@ EOF
 @PJL SET IMAGELEN=$jsize
 EOF
 
-        # Flushing image
-        cat $uid/raster.jbig
+		# Flushing image
+		cat $uid/raster.jbig
 
-        # Flushing page footer
-        # TODO: pixelcount for toner estimate
-        cat <<EOF
+		# Flushing page footer
+		# TODO: pixelcount for toner estimate
+		cat <<EOF
 @PJL SET DOTCOUNT=1132782
 @PJL SET PAGESTATUS=END
 EOF
-    }
-done
-) &
+	    }
+	done
+	) &
 
-# Converting from PostScript to PostScript-monochrome, then to PBM image format (per page)
-gs -sDEVICE=psmono -sOutputFile=- -r600 -dQUIET -dBATCH -dNOPAUSE - | gs -sDEVICE=pbmraw -sOutputFile=${uid}/%d-page.pbm -r600 -dQUIET -dBATCH -dNOPAUSE -
+	# Converting from PostScript to PostScript-monochrome, then to PBM image format (per page)
+	gs -sDEVICE=ps2write -sOutputFile=- -r600 -dQUIET -dBATCH -dNOPAUSE - | gs -sDEVICE=pbmraw -sOutputFile=${uid}/%03d-page.pbm -r600 -dQUIET -dBATCH -dNOPAUSE -
 
-stop
-wait
+	stop
+	wait
 
-trapINT
+	trapINT
+} || {
+
+	# Converting from PostScript to PostScript-monochrome, then to PBM image format (per page)
+	gs -sDEVICE=ps2write -sOutputFile=- -r600 -dQUIET -dBATCH -dNOPAUSE - | gs -sDEVICE=pbmraw -sOutputFile=${uid}/%03d-page.pbm -r600 -dQUIET -dBATCH -dNOPAUSE -
+
+	cat <<EOF
+%-12345X@PJL
+@PJL SET TIMESTAMP=$ddate
+@PJL SET FILENAME=Document
+@PJL SET COMPRESS=JBIG
+@PJL SET USERNAME=$user
+@PJL SET COVER=OFF
+@PJL SET HOLD=OFF
+EOF
+
+	for page in ${uid}/*-page.pbm; do
+
+		# Converting page to JBIG format (parameters are very special for this printer!)
+		pbmtojbg -p 72 -o 3 -m 0 -q < $page > $uid/raster.jbig
+
+		# Taking image size
+		jsize=`wc -c < $uid/raster.jbig`
+
+		# Taking image dimensions
+		read fn ft xs ys garb < <(identify $page | tr "x" " ")
+
+		# Flushing page header
+		cat <<EOF
+@PJL SET PAGESTATUS=START
+@PJL SET COPIES=1
+@PJL SET MEDIASOURCE=AUTO
+@PJL SET MEDIATYPE=PLAINRECYCLE
+@PJL SET PAPER=A4
+@PJL SET PAPERWIDTH=$xs
+@PJL SET PAPERLENGTH=$ys
+@PJL SET RESOLUTION=600
+@PJL SET IMAGELEN=$jsize
+EOF
+
+		# Flushing image
+		cat $uid/raster.jbig
+
+		# Flushing page footer
+		# TODO: pixelcount for toner estimate
+		cat <<EOF
+@PJL SET DOTCOUNT=1132782
+@PJL SET PAGESTATUS=END
+EOF
+	done
+
+	# Flushing PJL footer
+	cat <<EOF
+@PJL EOJ
+%-12345X
+EOF
+
+}
+
