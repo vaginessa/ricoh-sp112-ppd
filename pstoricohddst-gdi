@@ -1,18 +1,29 @@
 #!/bin/bash
 
+# Debug mode: change to 'yes' to enable
+DEBUG=no
+
+function log() {
+    [ "${DEBUG}" = "yes" ] && echo $* | logger -t "$0[$$]"
+}
+
+function logpipe() {
+    [ "${DEBUG}" = "yes" ] && echo $* | logger -t "$0[$$]"
+}
+
 function trapINT() {
+    log "trapINT()"
     [ "x$trp" = "x" ] &&  trp="yes" || return
-    sleep 30 && rm -rf $uid &
+    sleep 30 && { [ ! "${DEBUG}" = "yes" ] && rm -rf $uid; log "Cleanup complete"; } &
     exit
 }
 
 function stop() {
+    log "Stop stop page";
     echo "stop" > $uid/999999999-page.pbm
 }
 
-function log() {
-    echo $* | logger -t pstoricohddst-gdi
-}
+log "Called with cmdline: $0 $*"
 
 trap "stop; trapINT" SIGINT SIGTERM SIGQUIT
 #trap 'echo No' SIGINT SIGTERM SIGQUIT EXIT; 
@@ -30,14 +41,15 @@ ddate="`LC_ALL=en_US.UTF-8 date '+%Y/%m/%d %H:%M:%S'`"
 uid="/tmp/pstoricohddst-gdi-`uuidgen`"
 mkdir -p $uid
 
-[ -x "/usr/bin/inotifywait" ] && {
+[ -x "$(which inotifywait)" ] && {
+	log "Asynchronous variant"
 
 	(
 	stage="empty"
 	inotifywait -q -m -r -e close_write --format '%f' $uid | grep --line-buffered 'page.pbm$' | while read page; do
-	    # page submitted
+	    log "Page submitted"
 	    [ "$stage" = "empty" ] && {
-		# Flushing PJL header
+		log "1st stage. Flushing PJL header"
 		cat <<EOF
 %-12345X@PJL
 @PJL SET TIMESTAMP=$ddate
@@ -51,7 +63,7 @@ EOF
 		stage="printing"
 	    }
 	    [ "$page" = "999999999-page.pbm" ] && { 
-		# Flushing PJL footer
+		log "Last stage. Flushing PJL footer"
 		cat <<EOF
 @PJL EOJ
 %-12345X
@@ -83,7 +95,7 @@ EOF
 @PJL SET IMAGELEN=$jsize
 EOF
 
-		# Flushing image
+		log "Flushing image $page"
 		cat $uid/raster.jbig
 
 		# Flushing page footer
@@ -104,9 +116,12 @@ EOF
 
 	trapINT
 } || {
+	log "Synchronous variant"
 
 	# Converting from PostScript to PostScript-monochrome, then to PBM image format (per page)
+	log "Converting document to pages"
 	gs -sDEVICE=ps2write -sOutputFile=- -r600 -dQUIET -dBATCH -dNOPAUSE - | gs -sDEVICE=pbmraw -sOutputFile=${uid}/%03d-page.pbm -r600 -dQUIET -dBATCH -dNOPAUSE -
+	log "Conversion complete"
 
 	cat <<EOF
 %-12345X@PJL
@@ -120,6 +135,7 @@ EOF
 
 	for page in ${uid}/*-page.pbm; do
 
+		log "Page $page"
 		# Converting page to JBIG format (parameters are very special for this printer!)
 		pbmtojbg -p 72 -o 3 -m 0 -q < $page > $uid/raster.jbig
 
@@ -128,6 +144,7 @@ EOF
 
 		# Taking image dimensions
 		read fn ft xs ys garb < <(identify $page | tr "x" " ")
+		log "Identified as ${xs}x${ys}"
 
 		# Flushing page header
 		cat <<EOF
