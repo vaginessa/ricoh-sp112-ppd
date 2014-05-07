@@ -34,12 +34,16 @@ user="$2"
 ptitle="$3"
 my="$0"
 
+# MS-style EOL
+e=$(echo -en "\r")
+
 # Printing date
 ddate="`LC_ALL=en_US.UTF-8 date '+%Y/%m/%d %H:%M:%S'`"
 
 # Temporary directory
 uid="/tmp/pstoricohddst-gdi-`uuidgen`"
 mkdir -p $uid
+[ "${DEBUG}" = "yes" ] && exec >$uid/output.stream #> >(tee $uid/output.stream)
 
 [ -x "$(which inotifywait)" ] && {
 	log "Asynchronous variant"
@@ -51,13 +55,13 @@ mkdir -p $uid
 	    [ "$stage" = "empty" ] && {
 		log "1st stage. Flushing PJL header"
 		cat <<EOF
-%-12345X@PJL
-@PJL SET TIMESTAMP=$ddate
-@PJL SET FILENAME=Document
-@PJL SET COMPRESS=JBIG
-@PJL SET USERNAME=$user
-@PJL SET COVER=OFF
-@PJL SET HOLD=OFF
+%-12345X@PJL$e
+@PJL SET TIMESTAMP=$ddate$e
+@PJL SET FILENAME=Document$e
+@PJL SET COMPRESS=JBIG$e
+@PJL SET USERNAME=$user$e
+@PJL SET COVER=OFF$e
+@PJL SET HOLD=OFF$e
 EOF
 
 		stage="printing"
@@ -65,7 +69,7 @@ EOF
 	    [ "$page" = "999999999-page.pbm" ] && { 
 		log "Last stage. Flushing PJL footer"
 		cat <<EOF
-@PJL EOJ
+@PJL EOJ$e
 %-12345X
 EOF
 		pid=`ps ax | grep $uid | grep -v grep | awk ' { print $1 } '`
@@ -84,15 +88,15 @@ EOF
 
 		# Flushing page header
 		cat <<EOF
-@PJL SET PAGESTATUS=START
-@PJL SET COPIES=1
-@PJL SET MEDIASOURCE=AUTO
-@PJL SET MEDIATYPE=PLAINRECYCLE
-@PJL SET PAPER=A4
-@PJL SET PAPERWIDTH=$xs
-@PJL SET PAPERLENGTH=$ys
-@PJL SET RESOLUTION=600
-@PJL SET IMAGELEN=$jsize
+@PJL SET PAGESTATUS=START$e
+@PJL SET COPIES=1$e
+@PJL SET MEDIASOURCE=AUTO$e
+@PJL SET MEDIATYPE=PLAINRECYCLE$e
+@PJL SET PAPER=A4$e
+@PJL SET PAPERWIDTH=$xs$e
+@PJL SET PAPERLENGTH=$ys$e
+@PJL SET RESOLUTION=600$e
+@PJL SET IMAGELEN=$jsize$e
 EOF
 
 		log "Flushing image $page"
@@ -101,15 +105,16 @@ EOF
 		# Flushing page footer
 		# TODO: pixelcount for toner estimate
 		cat <<EOF
-@PJL SET DOTCOUNT=1132782
-@PJL SET PAGESTATUS=END
+@PJL SET DOTCOUNT=1132782$e
+@PJL SET PAGESTATUS=END$e
 EOF
 	    }
 	done
 	) &
 
 	# Converting from PostScript to PostScript-monochrome, then to PBM image format (per page)
-	gs -sDEVICE=ps2write -sOutputFile=- -r600 -dQUIET -dBATCH -dNOPAUSE - | gs -sDEVICE=pbmraw -sOutputFile=${uid}/%03d-page.pbm -r600 -dQUIET -dBATCH -dNOPAUSE -
+	#gs -sDEVICE=ps2write -sOutputFile=- -r600 -dQUIET -dBATCH -dNOPAUSE - | 
+	gs -sDEVICE=pbmraw -sOutputFile=${uid}/%03d-page.pbm -r600 -dQUIET -dBATCH -dNOPAUSE -
 
 	stop
 	wait
@@ -124,13 +129,13 @@ EOF
 	log "Conversion complete"
 
 	cat <<EOF
-%-12345X@PJL
-@PJL SET TIMESTAMP=$ddate
-@PJL SET FILENAME=Document
-@PJL SET COMPRESS=JBIG
-@PJL SET USERNAME=$user
-@PJL SET COVER=OFF
-@PJL SET HOLD=OFF
+%-12345X@PJL$e
+@PJL SET TIMESTAMP=$ddate$e
+@PJL SET FILENAME=Document$e
+@PJL SET COMPRESS=JBIG$e
+@PJL SET USERNAME=$user$e
+@PJL SET COVER=OFF$e
+@PJL SET HOLD=OFF$e
 EOF
 
 	for page in ${uid}/*-page.pbm; do
@@ -148,15 +153,15 @@ EOF
 
 		# Flushing page header
 		cat <<EOF
-@PJL SET PAGESTATUS=START
-@PJL SET COPIES=1
-@PJL SET MEDIASOURCE=AUTO
-@PJL SET MEDIATYPE=PLAINRECYCLE
-@PJL SET PAPER=A4
-@PJL SET PAPERWIDTH=$xs
-@PJL SET PAPERLENGTH=$ys
-@PJL SET RESOLUTION=600
-@PJL SET IMAGELEN=$jsize
+@PJL SET PAGESTATUS=START$e
+@PJL SET COPIES=1$e
+@PJL SET MEDIASOURCE=AUTO$e
+@PJL SET MEDIATYPE=PLAINRECYCLE$e
+@PJL SET PAPER=A4$e
+@PJL SET PAPERWIDTH=$xs$e
+@PJL SET PAPERLENGTH=$ys$e
+@PJL SET RESOLUTION=600$e
+@PJL SET IMAGELEN=$jsize$e
 EOF
 
 		# Flushing image
@@ -165,14 +170,14 @@ EOF
 		# Flushing page footer
 		# TODO: pixelcount for toner estimate
 		cat <<EOF
-@PJL SET DOTCOUNT=1132782
-@PJL SET PAGESTATUS=END
+@PJL SET DOTCOUNT=1132782$e
+@PJL SET PAGESTATUS=END$e
 EOF
 	done
 
 	# Flushing PJL footer
 	cat <<EOF
-@PJL EOJ
+@PJL EOJ$e
 %-12345X
 EOF
 
