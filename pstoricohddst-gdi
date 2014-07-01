@@ -33,6 +33,16 @@ user="$2"
 # Page title (not used at this time, "Document" instead)
 ptitle="$3"
 my="$0"
+options="$5"
+
+pagesize="A4"
+for opt in $options; do
+	case "$opt" in
+		PageSize=*)
+		pagesize="$(echo "${opt#PageSize=}" | tr a-z A-Z)"
+		;;
+	esac
+done
 
 # MS-style EOL
 e=$(echo -en "\r")
@@ -92,7 +102,7 @@ EOF
 @PJL SET COPIES=1$e
 @PJL SET MEDIASOURCE=AUTO$e
 @PJL SET MEDIATYPE=PLAINRECYCLE$e
-@PJL SET PAPER=A4$e
+@PJL SET PAPER=$pagesize$e
 @PJL SET PAPERWIDTH=$xs$e
 @PJL SET PAPERLENGTH=$ys$e
 @PJL SET RESOLUTION=600$e
@@ -157,7 +167,7 @@ EOF
 @PJL SET COPIES=1$e
 @PJL SET MEDIASOURCE=AUTO$e
 @PJL SET MEDIATYPE=PLAINRECYCLE$e
-@PJL SET PAPER=A4$e
+@PJL SET PAPER=pagesize$e
 @PJL SET PAPERWIDTH=$xs$e
 @PJL SET PAPERLENGTH=$ys$e
 @PJL SET RESOLUTION=600$e
