@@ -37,6 +37,7 @@ options="$5"
 
 pagesize="A4"
 resolution="600"
+mediasource="TRAY1"
 for opt in $options; do
 	case "$opt" in
 		PageSize=*)
@@ -45,6 +46,10 @@ for opt in $options; do
 	    	Resolution=*)
 		resolution=${opt#Resolution=}
 		resolution=${resolution%dpi}
+		;;
+		InputSlot=*)
+		mediasource=${opt#InputSlot=}
+		;;
 	esac
 done
 
@@ -104,7 +109,7 @@ EOF
 		cat <<EOF
 @PJL SET PAGESTATUS=START$e
 @PJL SET COPIES=1$e
-@PJL SET MEDIASOURCE=AUTO$e
+@PJL SET MEDIASOURCE=$mediasource$e
 @PJL SET MEDIATYPE=PLAINRECYCLE$e
 @PJL SET PAPER=$pagesize$e
 @PJL SET PAPERWIDTH=$xs$e
@@ -169,7 +174,7 @@ EOF
 		cat <<EOF
 @PJL SET PAGESTATUS=START$e
 @PJL SET COPIES=1$e
-@PJL SET MEDIASOURCE=AUTO$e
+@PJL SET MEDIASOURCE=$mediasource$e
 @PJL SET MEDIATYPE=PLAINRECYCLE$e
 @PJL SET PAPER=$pagesize$e
 @PJL SET PAPERWIDTH=$xs$e

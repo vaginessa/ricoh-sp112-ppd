@@ -77,8 +77,9 @@
 *CloseUI: *MediaType
 *OpenUI *InputSlot/Media Source: PickOne
 *OrderDependency: 10 AnySetup *InputSlot
-*DefaultInputSlot: Auto
-*InputSlot Auto/Auto: "<</MediaPosition 0>>setpagedevice"
+*DefaultInputSlot: TRAY1
+*InputSlot MANUALFEED/Bypass Tray: "<</MediaPosition 0>>setpagedevice"
+*InputSlot TRAY1/Tray 1: "<</MediaPosition 1>>setpagedevice"
 *CloseUI: *InputSlot
 *OpenUI *Resolution/Resolution: PickOne
 *OrderDependency: 10 AnySetup *Resolution
