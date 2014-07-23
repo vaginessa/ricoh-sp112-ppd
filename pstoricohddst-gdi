@@ -36,11 +36,15 @@ my="$0"
 options="$5"
 
 pagesize="A4"
+resolution="600"
 for opt in $options; do
 	case "$opt" in
 		PageSize=*)
 		pagesize="$(echo "${opt#PageSize=}" | tr a-z A-Z)"
 		;;
+	    	Resolution=*)
+		resolution=${opt#Resolution=}
+		resolution=${resolution%dpi}
 	esac
 done
 
@@ -105,7 +109,7 @@ EOF
 @PJL SET PAPER=$pagesize$e
 @PJL SET PAPERWIDTH=$xs$e
 @PJL SET PAPERLENGTH=$ys$e
-@PJL SET RESOLUTION=600$e
+@PJL SET RESOLUTION=${resolution%x600}$e
 @PJL SET IMAGELEN=$jsize$e
 EOF
 
@@ -123,8 +127,8 @@ EOF
 	) &
 
 	# Converting from PostScript to PostScript-monochrome, then to PBM image format (per page)
-	#gs -sDEVICE=ps2write -sOutputFile=- -r600 -dQUIET -dBATCH -dNOPAUSE - | 
-	gs -sDEVICE=pbmraw -sOutputFile=${uid}/%03d-page.pbm -r600 -dQUIET -dBATCH -dNOPAUSE -
+	#gs -sDEVICE=ps2write -sOutputFile=- -r$resolution -dQUIET -dBATCH -dNOPAUSE - | 
+	gs -sDEVICE=pbmraw -sOutputFile=${uid}/%03d-page.pbm -r$resolution -dQUIET -dBATCH -dNOPAUSE -
 
 	stop
 	wait
@@ -135,7 +139,7 @@ EOF
 
 	# Converting from PostScript to PostScript-monochrome, then to PBM image format (per page)
 	log "Converting document to pages"
-	gs -sDEVICE=ps2write -sOutputFile=- -r600 -dQUIET -dBATCH -dNOPAUSE - | gs -sDEVICE=pbmraw -sOutputFile=${uid}/%03d-page.pbm -r600 -dQUIET -dBATCH -dNOPAUSE -
+	gs -sDEVICE=ps2write -sOutputFile=- -r$resolution -dQUIET -dBATCH -dNOPAUSE - | gs -sDEVICE=pbmraw -sOutputFile=${uid}/%03d-page.pbm -r$resolution -dQUIET -dBATCH -dNOPAUSE -
 	log "Conversion complete"
 
 	cat <<EOF
@@ -170,7 +174,7 @@ EOF
 @PJL SET PAPER=$pagesize$e
 @PJL SET PAPERWIDTH=$xs$e
 @PJL SET PAPERLENGTH=$ys$e
-@PJL SET RESOLUTION=600$e
+@PJL SET RESOLUTION=${resolution%x600}$e
 @PJL SET IMAGELEN=$jsize$e
 EOF
 
