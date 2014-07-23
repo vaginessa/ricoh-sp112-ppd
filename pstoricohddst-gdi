@@ -193,3 +193,6 @@ EOF
 
 }
 
+#rm -rf $uid;
+
+exit 0
