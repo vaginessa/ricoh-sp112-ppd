@@ -15,7 +15,7 @@ So, installation procedures:
    chown root:root pstoricohddst-gdi) 
 
 5) Add printer through CUPS' web interface (usually
-   http://localhost:631/), click 'Choose file' and select provided PPD-file
+   http://localhost:631/), click 'Choose file' and select one of provided PPD-files
 
 6) Print!
 
